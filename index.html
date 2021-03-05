@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>golf</title>
+<meta http‐equiv="X‐UA‐Compatible" content="IE=edge">
+<script type="text/javascript" src='https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>
+<body>
+    <canvas id="main" width="1000" height="1000"></canvas>
+    <img id="forest" src="img/forest.png" alt="" style="display: none;">
+    <img id="pond" src="img/pond.jpg" alt="" style="display: none;">
+    <img id="goal" src="img/goal.png" alt="" style="display: none;">
+    <audio id="driver" style="display:none;"><source src="se/ゴルフ・ドライバーショット.mp3" type="audio/mp3"></audio>
+    <audio id="patar" style="display:none;"><source src="se/ゴルフ・パター.mp3" type="audio/mp3"></audio>
+    <audio id="in" style="display:none;"><source src="se/ゴルフ・カップイン.mp3" type="audio/mp3"></audio>
+    <audio id="pocha" style="display:none;"><source src="se/水滴3.mp3" type="audio/mp3"></audio>
+    <audio id="mori" style="display:none;"><source src="se/森.mp3" type="audio/mp3"></audio>
+
+</body>
+<script type="text/javascript">
+
+var ball_x = 100;
+var ball_y = 100;
+var ball_r = 10;
+var ball_ra = 0;
+var ball_dx;
+var ball_dy;
+var ball_ddx = 100;
+var ball_ddy = 100;
+var kaze_x = 3;
+var kaze_y = 0;
+var flag;
+var is_banker = false;
+var pre_x;
+var pre_y;
+var at_bat = 0;
+
+var goal_x;
+var goal_y;
+var banker = [];
+var forest = [];
+var pond = [];
+var error;
+
+var is_driver = false;
+var status = 'お試し';
+
+var canvas = $("#main");
+ctx = canvas[0].getContext("2d");
+
+  $(function(){
+    start();
+  });
+
+  function start() {
+    $(window).keydown(mykeydown);
+    getCose();
+    ball();
+    canvas.mousedown(mymousedown);
+    canvas.mousemove(mymousemove);
+    canvas.mouseup(mymouseup);
+  }
+
+  function getCose(){
+    ball_x = 100;
+    ball_y = 100;
+    banker = [];
+    forest = [];
+    pond = [];
+    at_bat = 0;
+    //cose定義
+    goal_x = 800;
+    goal_y = 800;
+
+    for (let i = 0; i < 3; i++) {
+      banker.push(Math.round(Math.random() * 22) + 1);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      forest.push(Math.round(Math.random() * 22) + 1);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      pond.push(Math.round(Math.random() * 22) + 1);
+    }
+}
+
+function makeCose() {
+
+  ctx.fillStyle = "#7c946f";
+  ctx.fillRect(0, 0, 1000, 1000);
+
+  for (let i = 0; i < pond.length; i++) {
+    var po = $('#pond')[0];
+    ctx.drawImage(po, (pond[i] % 5) * 200, Math.floor(pond[i] / 5)*200, 200, 200);
+  }
+
+  for (let i = 0; i < pond.length; i++) {
+    ctx.fillStyle = "#7c946f";
+    ctx.fillRect((forest[i] % 5) * 200, Math.floor(forest[i] / 5)*200, 200, 200);
+    var fo = $('#forest')[0];
+    ctx.drawImage(fo, (forest[i] % 5) * 200, Math.floor(forest[i] / 5)*200, 200, 200);
+  }
+
+  for (let i = 0; i < pond.length; i++) {
+    ctx.fillStyle = "#e6d0b1";
+    ctx.fillRect((banker[i] % 5) * 200, Math.floor(banker[i] / 5)*200, 200, 200);
+  }
+  var go = $('#goal')[0];
+  ctx.drawImage(go, goal_x + 50, goal_y + 50, 30, 100);
+
+  status = '';
+  status += at_bat + '打目 ';
+  if (is_driver) {
+    status += 'ドライバー';
+  }else{
+    status += 'パター';
+  }
+  ctx.font = "25px 'Yu Gothic'";
+  ctx.fillStyle = "#00008b";
+  ctx.fillText(status, 40, 40);
+}
+
+  function ball() {
+    makeCose();
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(ball_x, ball_y, ball_r, 0, Math.PI*2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function mykeydown(e) {
+    switch(e.keyCode) {
+      case 37: //左
+      is_driver = true;
+      break;
+      case 39: //右
+      is_driver = false;
+      break;
+    }
+    ball();
+  }
+
+  function restart(e) {
+    if (e.keyCode == 40) {
+      start();
+      $(window).off("restart");
+    }
+  }
+
+  function mymousedown(e) {
+    ctx.clearRect(0,0,1000,1000);
+    ball();
+    flag = true;
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+    ctx.lineTo(ball_x, ball_y);
+    ctx.stroke();
+  }
+  function mymousemove(e) {
+    if(flag==true) {
+      ctx.clearRect(0,0,1000,1000);
+      ball();
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+      ctx.lineTo(ball_x, ball_y);
+      ctx.stroke();
+    }
+  }
+  function mymouseup(e) {
+    ctx.clearRect(0,0,1000,1000);
+    ball();
+    flag = false;
+    
+    $(window).off("mykeydown");
+    canvas.off("mousedown");
+    canvas.off("mousemove");
+    canvas.off("mouseup");
+    pre_x = ball_x;
+    pre_y = ball_y;
+    if (is_banker) {
+      ball_dx = (ball_x - e.offsetX)/20;
+      ball_dy = (ball_y - e.offsetY)/20;
+      is_banker = false;
+    }else{
+      ball_dx = (ball_x - e.offsetX)/10;
+      ball_dy = (ball_y - e.offsetY)/10;
+    }
+    ball_ddx = 100;
+    ball_ddy = 100;
+    if (is_driver) {
+      $('#driver')[0].play();
+    }else{
+      $('#patar')[0].play();
+    }
+    timerShot = setInterval(shot, 20);
+  }
+
+  function shot(){
+    ctx.clearRect(0, 0, 1000, 1000);
+    makeCose();
+    ball_dx = ball_dx * (ball_ddy/100);
+    ball_dy = ball_dy * (ball_ddy/100);
+    ball_x = ball_x + Math.round(ball_dx);
+    ball_y = ball_y + Math.round(ball_dy);
+    
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(ball_x, ball_y, ball_r, 0, Math.PI*2);
+    ctx.closePath();
+    ctx.fill();
+    ball_ddx --;
+    ball_ddy --;
+
+    if (!is_driver || (is_driver && ball_ddx == 46)) {
+      check();
+    }
+
+    if (ball_ddx == 45){
+        at_bat++;
+        clearInterval(timerShot);
+        $(window).keydown(mykeydown);
+        canvas.mousedown(mymousedown);
+        canvas.mousemove(mymousemove);
+        canvas.mouseup(mymouseup);
+    }
+  }
+
+  function check() {
+    var is_forest = false;
+    for (let i = 0; i < banker.length; i++) {
+      if (((banker[i] % 5) * 200 < ball_x && ball_x < (banker[i] % 5) * 200 + 200) && (Math.floor(banker[i] / 5)*200 < ball_y && ball_y < Math.floor(banker[i] / 5) * 200 + 200 )) {
+        is_banker = true;
+      }
+    }
+    for (let i = 0; i < pond.length; i++) {
+      if (((pond[i] % 5) * 200 < ball_x && ball_x < (pond[i] % 5) * 200 + 200) && (Math.floor(pond[i] / 5)*200 < ball_y && ball_y < Math.floor(pond[i] / 5) * 200 + 200 )) {
+        if (!is_banker) {
+          out();
+          text('池ぽちゃ');
+          $('#pocha')[0].play();
+          is_forest = true;
+        }
+      }
+    }
+    for (let i = 0; i < forest.length; i++) {
+      if (((forest[i] % 5) * 200 < ball_x && ball_x < (forest[i] % 5) * 200 + 200) && (Math.floor(forest[i] / 5)*200 < ball_y && ball_y < Math.floor(forest[i] / 5) * 200 + 200 )) {
+        if (!is_banker && !is_forest) {
+          out();
+          text('森だよ');
+          $('#mori')[0].play();
+        }
+      }
+    }
+    if(ball_x < 0 || 1000 < ball_x || ball_y < 0 || 1000 < ball_y){
+        text('コースアウト');
+        out();
+    }else if((850 < ball_x && ball_x <900) && (930 < ball_y && ball_y <950)){
+        clearInterval(timerShot);
+        ctx.font = "50px 'Yu Gothic'";
+        ctx.fillStyle = "#00008b";
+        ctx.fillText('ゴール 打数:' + at_bat + 'リスタート↓', 200, 450);
+        $(window).keydown(restart);
+        $('#in')[0].play();
+
+    }
+  }
+
+  function text(text) {
+        var darkness = 0;
+        timerText = setInterval(emerge, 25);
+
+        function emerge() {
+            ball();
+            ctx.globalAlpha = darkness / 100;
+            ctx.font = "50px 'Yu Gothic'";
+            ctx.fillStyle = "#00008b";
+            ctx.fillText(text, 400, 450);
+            darkness++;
+            ctx.globalAlpha = 1;
+            if (darkness == 80) {
+                ctx.globalAlpha = 1;
+                clearInterval(timerText);
+                ball();
+                canvas.mousedown(mymousedown);
+                canvas.mousemove(mymousemove);
+                canvas.mouseup(mymouseup);
+            }
+        }
+  }
+
+  function out() {
+      clearInterval(timerShot);
+      at_bat += 2;
+      ball_x = pre_x;
+      ball_y = pre_y;
+  }
+  
+</script>
+</head>
+</html>
